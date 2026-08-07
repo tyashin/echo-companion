@@ -446,7 +446,7 @@ Requirements:
 - **Fuzzy and relative time.** Partial dates (year, decade), interval bounds, and `BEFORE`/`AFTER` ordering edges between life events that carry relational truth even when no absolute dates are known ("after the army, before the move").
 - **Era anchors.** A family-seeded skeleton biography (birth, places lived, education, service, career, marriage, children, retirement) stored as anchor events and time intervals with `origin: FAMILY_PROVIDED`; incoming reminiscences attach to anchors instead of floating free.
 - **Retelling consolidation.** Repeated tellings of the same story merge into one canonical story node: each telling linked as evidence, new details extracted and attached per retelling, contradictions across tellings preserved with provenance and never resolved by deletion. Drift across tellings is clinically significant and is surfaced to the family (admin scope) only, never to the patient.
-- **Origin marker.** Every event carries `origin`: `OBSERVED` (sensors), `REPORTED` (the patient's speech), or `FAMILY_PROVIDED` (trusted circle). Retrieval phrasing keys off it ("вы рассказывали..." vs. "я видела..." vs. "Андрей передал...").
+- **Origin marker.** Every event carries `origin`: `OBSERVED` (sensors), `REPORTED` (the patient's speech), or `FAMILY_PROVIDED` (trusted circle). Retrieval phrasing keys off it ("вы рассказывали..." vs. "я видела..." vs. "Елена передала...").
 - **Valence flags.** Stories and topics carry approach/avoid signals inferred from engagement and affect, plus explicit family marks. Family-marked avoidances are hard constraints on proactive topic selection (§15.5).
 
 ### 8.6 Neo4j operational guardrails
@@ -873,7 +873,7 @@ Answers should distinguish source types where useful:
 
 Echo has exactly one patient-facing persona: a stable, predictable identity that never changes. Multiple characters would be a confusion engine for this user; consistency itself is the therapeutic value.
 
-The baseline persona — validated against alternatives during the Phase 0 probe — is a devoted personal secretary: warm, mature female voice; respectful Russian «вы» register; unhurried speech. The frame preserves the patient's status (the boss whose affairs deserve tracking, not a patient being monitored) and makes the system's capabilities legible in character: the secretary keeps notes (observations), remembers what people told her (assertions), and checks her records before answering. Alternatives tested in the probe: a peer/old-friend register, and a plain warm companion with no role frame. The family shortlists candidates; the patient's reactions choose; the result is frozen as versioned configuration. The first deployment targets an elderly Russian-speaking woman; voice, name, and role-frame specifics are validated with her in the probe.
+The baseline persona — validated against alternatives during the Phase 0 probe — is a devoted personal secretary: warm, mature female voice; respectful Russian «вы» register; unhurried speech. The frame preserves the patient's status (the boss whose affairs deserve tracking, not a patient being monitored) and makes the system's capabilities legible in character: the secretary keeps notes (observations), remembers what people told her (assertions), and checks her records before answering. Alternatives tested in the probe: a peer/old-friend register, and a plain warm companion with no role frame. The family shortlists candidates; the patient's reactions choose; the result is frozen as versioned configuration. Voice, name, and role-frame specifics are validated with the actual patient in the probe before freezing.
 
 Rules:
 
@@ -996,7 +996,7 @@ The patient's assertions are never overridden in storage — they remain evidenc
 
 The primary trusted-circle channel is **text chat** (e.g., a Telegram bot), not audio: account-bound identity is strong, asynchronous messages respect scarce family attention, every action is self-documenting, and members can send rich evidence — a photo of a prescription becomes a provenance-bearing observation. In-person voice remains available, but speaker identification is probabilistic (§9.4), so trust-sensitive actions taken by voice carry reduced authority or require remote confirmation.
 
-Echo may actively request verification from the circle ("Андрей, подтвердите: ...") under strict rate limits — family attention is the scarcest resource in the system.
+Echo may actively request verification from the circle ("Елена, подтвердите: ...") under strict rate limits — family attention is the scarcest resource in the system.
 
 Every trust action — confirmation, dispute, seeding edit, correction — is recorded with provenance (who, when, which channel, what changed) and appends rather than modifies (§6.6).
 
