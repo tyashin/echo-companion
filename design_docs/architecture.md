@@ -40,6 +40,7 @@ Echo should:
 6. Communicate briefly, warmly, and patiently.
 7. Operate unattended for long periods and recover from network or process failures.
 8. Support progressively richer perception without requiring a client rewrite.
+9. Provide proactive socialization: initiate and sustain conversations on topics the patient finds engaging, drawing on the memory graph and family-provided knowledge of his interests and biography.
 
 ### Non-goals for the first implementation
 
@@ -161,6 +162,10 @@ Relevant Godot facilities include:
 - `CameraServer` and `CameraFeed` for Android camera feeds in Godot 4.7.1+;
 - `PacketPeerUDP` for local pan-tilt controller commands;
 - GDExtension for native C++ integration when necessary.
+
+### Development workflow
+
+Most client functionality — audio capture, transport, spool, avatar, state machines — is platform-independent GDScript and is developed and tested on a Linux development PC, not by continuous tablet deployment. Camera frame acquisition is hidden behind a small interface with two backends: a `CameraFeed` backend for the tablet and a file/replay backend on desktop that serves recorded frames from disk (doubling as input for the evaluation harness). The tablet is required only for validating the `CameraFeed` backend itself and for performance profiling; one-click deploy over adb (including adb over Wi-Fi) keeps that iteration tolerable.
 
 ### C++ escalation rule
 
@@ -286,6 +291,12 @@ The system must preserve polarity and modality. These utterances must not create
 "The television said to take the medicine."
 ```
 
+### 6.6 Family-provided facts and verification
+
+The trusted circle (see §17) is a first-class evidence channel. Facts entered by a trusted family member — prescribed medications, appointments, the biography skeleton, topic approach/avoid marks — are stored with `origin: FAMILY_PROVIDED` and their own provenance (who, when, which channel). They typically enter at `SUPPORTED` or `CONFIRMED` and serve as external ground truth that sensors cannot provide: a family-maintained medication plan, for example, allows "medication taken" candidate events to be cross-checked against an actual prescription schedule.
+
+Confirmation or dispute by a trusted principal is the first concrete rule for promoting candidate events between the statuses in §6.5. Trust actions never modify or delete existing evidence; they append new provenance-bearing records, and the patient's own contradicting assertions remain stored as evidence of what he believes.
+
 ---
 
 ## 7. Postgres: Evidence Ledger and Operational Source of Truth
@@ -316,6 +327,8 @@ model_runs
 processing_jobs
 conversation_turns
 embeddings
+principals
+trust_actions
 graph_outbox
 graph_projection_checkpoints
 ```
@@ -373,9 +386,11 @@ A telephone call should not exist only as a timestamped `CALLED` edge.
   id: $event_id,
   type: "PHONE_CALL",
   occurred_at: $occurred_at,
+  occurred_at_precision: $precision, // "minute" | "hour" | "day" | "year" | "decade" — see §8.5
   ended_at: $ended_at,
   confidence: $confidence,
-  status: $status
+  status: $status,
+  origin: $origin // OBSERVED | REPORTED | FAMILY_PROVIDED
 })
 ```
 
@@ -391,6 +406,10 @@ Relationships may include:
 (Event)-[:SUPPORTED_BY]->(ObservationReference)
 (Event)-[:CONTRADICTS]->(Event)
 (Event)-[:SUPERSEDES]->(Event)
+(Event)-[:BEFORE]->(Event)
+(Event)-[:AFTER]->(Event)
+(Event)-[:CONFIRMED_BY {at: $at, via: $channel}]->(Person)
+(Person)-[:ENGAGED_WITH {last_discussed_at: $at, engagement: $score}]->(Topic)
 ```
 
 ### 8.3 Mentions and identity resolution
@@ -418,6 +437,28 @@ Projection sequence:
 5. Failures are retried safely.
 6. Neo4j can be rebuilt entirely from Postgres.
 
+### 8.5 Biographical events and life stories
+
+The patient will discuss events from his entire life. These enter through the assertion path (§6.2): what he says about his past is evidence that he said it. Two timelines are kept distinct — `told_at` (when he said it; precise, observed) and `occurred_at` (when it happened; often fuzzy, reported).
+
+Requirements:
+
+- **Fuzzy and relative time.** Partial dates (year, decade), interval bounds, and `BEFORE`/`AFTER` ordering edges between life events that carry relational truth even when no absolute dates are known ("after the army, before the move").
+- **Era anchors.** A family-seeded skeleton biography (birth, places lived, education, service, career, marriage, children, retirement) stored as anchor events and time intervals with `origin: FAMILY_PROVIDED`; incoming reminiscences attach to anchors instead of floating free.
+- **Retelling consolidation.** Repeated tellings of the same story merge into one canonical story node: each telling linked as evidence, new details extracted and attached per retelling, contradictions across tellings preserved with provenance and never resolved by deletion. Drift across tellings is clinically significant and is surfaced to the family (admin scope) only, never to the patient.
+- **Origin marker.** Every event carries `origin`: `OBSERVED` (sensors), `REPORTED` (the patient's speech), or `FAMILY_PROVIDED` (trusted circle). Retrieval phrasing keys off it ("вы рассказывали..." vs. "я видела..." vs. "Андрей передал...").
+- **Valence flags.** Stories and topics carry approach/avoid signals inferred from engagement and affect, plus explicit family marks. Family-marked avoidances are hard constraints on proactive topic selection (§15.5).
+
+### 8.6 Neo4j operational guardrails
+
+Single-patient scale (worst case: low millions of nodes over years) is far below Neo4j limits; the risks are schema and operations, not performance.
+
+- Uniqueness constraints on every stable ID projected from Postgres; the §8.4 projector's `MERGE` path must never degrade into scans.
+- The patient's `Person` node will accumulate very large numbers of relationships (supernode). Queries lead with an indexed `Event.occurred_at` range rather than traversing outward from him; add a time-tree layer only if measurements demand it.
+- Variable-length traversals in retrieval are capped (2–3 hops) and anchored on indexed properties.
+- Community Edition has no online hot backup: schedule regular dumps, and rely on the rebuild-from-Postgres invariant as the primary recovery path.
+- Vector search stays in pgvector; do not maintain a second embedding index in Neo4j.
+
 ---
 
 ## 9. Audio Pipeline
@@ -443,9 +484,11 @@ payload
 
 The server acknowledges durable receipt. Unacknowledged frames remain in the local spool and may be retransmitted idempotently.
 
-### 9.2 Continuous ASR
+### 9.2 Sound-gated ASR
 
-Continuous cloud ASR is acceptable. Provider session-duration limits must be hidden behind an adapter that rotates sessions while retaining continuous timestamps and limited overlap for boundary recovery.
+The client does not stream silence. A client-side VAD ("wake on sound") gates transmission: a pre-roll buffer keeps utterance onsets intact, and client-side timestamps remain continuous across gated segments so the server still sees one coherent timeline. VAD decisions are logged as observations — "sound present but not ingested" is itself evidence for retention and audit questions.
+
+Cloud ASR runs on the gated segments. Provider session-duration limits must be hidden behind an adapter that rotates sessions while retaining continuous timestamps and limited overlap for boundary recovery.
 
 Usage accounting must detect:
 
@@ -500,7 +543,16 @@ Identification evidence may include:
 - self-identification in speech;
 - conversational context.
 
-### 9.5 Echo-speech exclusion
+### 9.5 Media exclusion gate
+
+Audio identified as media (television, radio) is excluded from memory ingestion by default: most of it is irrelevant to the patient's life, and ingesting it would pollute transcripts, speaker clusters, and extracted events. A media/household gate therefore runs before ASR and diarization commit utterances to the evidence ledger.
+
+Two qualifications:
+
+- The gate must survive overlap: television playing while the patient talks to a visitor is the normal case, not an edge case. ASR and diarization are still evaluated with TV in the background (§19), and household speech during media playback must not be discarded — the media false-negative rate matters as much as the false-positive rate.
+- The patient can explicitly ask Echo to remember something from media ("Эхо, запиши это"). This depends on intent-of-address detection (§15.4) and is stored as a media-derived observation with its own provenance.
+
+### 9.6 Echo-speech exclusion
 
 Echo's generated turn must be stored directly as a generated conversation utterance. It must not be learned again through the microphone.
 
@@ -514,6 +566,8 @@ Initial implementation: half-duplex memory ingestion.
 5. Client emits `playback_ended`.
 6. After a short acoustic tail interval, normal ingestion resumes.
 ```
+
+Failure paths are part of the design, not an afterthought: the suppression window is server-authoritative and bounded by the known playback duration plus a bounded tail; if `playback_ended` is lost or the client crashes, ingestion resumes at window expiry rather than staying suppressed indefinitely or leaking Echo's voice; on reconnect, client and server re-sync suppression state idempotently. Concrete timeout values are set during Phase 1b soak testing.
 
 Generated Echo turns remain in conversation history so that references such as "she" or "that call" can be resolved in subsequent patient speech.
 
@@ -780,7 +834,9 @@ Projects stable IDs, events, entities, and relationships into Neo4j through the 
 
 ### 13.7 Consolidation layer
 
-Builds daily digests, recurring routines, and higher-level patterns. Consolidation produces new derived records and graph structures; it does not discard contradictory source history.
+Builds daily digests, recurring routines, canonical life stories (merging repeated tellings; see §8.5), and higher-level patterns. Consolidation produces new derived records and graph structures; it does not discard contradictory source history.
+
+Consolidated artifacts are human-readable, versioned records stored in Postgres and rendered as text the family can review: digests, learned routines, "topics that engage him," "what calms him." The family can correct or reject them through the trusted-circle channel (§17); corrections are appended with provenance, never overwritten. The pattern worth copying from personal-agent systems (e.g., Hermes Agent's inspectable, approvable learned artifacts) is the curation UX, not the file storage.
 
 ---
 
@@ -799,6 +855,8 @@ Retrieval is hybrid.
 
 Recency is not always the dominant ranking criterion. It should depend on the query. "When did Elena last call?" requires strict temporal ordering; "What did Elena say about university?" may require older semantically relevant evidence.
 
+Retrieval has two modes. "What happened" answers retrospective questions as above. "What to talk about" serves proactive socialization (§15.5): least-recently-discussed high-engagement topics, upcoming events and anniversaries from the graph, era anchors and favorite stories from the biographical layer — always filtered through valence approach/avoid constraints before anything reaches the patient.
+
 Answers should distinguish source types where useful:
 
 ```text
@@ -809,35 +867,60 @@ Answers should distinguish source types where useful:
 
 ---
 
-## 15. Conversation and Avatar
+## 15. Conversation, Persona, and Avatar
 
-### 15.1 Avatar
+### 15.1 Persona
 
-The first avatar is an on-device 2D talking head rendered by Godot.
+Echo has exactly one patient-facing persona: a stable, predictable identity that never changes. Multiple characters would be a confusion engine for this user; consistency itself is the therapeutic value.
 
-Recommended features:
+The baseline persona — validated against alternatives during the Phase 0 probe — is a devoted personal secretary: warm, mature female voice; respectful Russian «вы» register; unhurried speech. The frame preserves the patient's status (he is the boss whose affairs deserve tracking, not a patient being monitored) and makes the system's capabilities legible in character: she keeps notes (observations), remembers what people told her (assertions), and checks her records before answering. Alternatives tested in the probe: a peer/old-friend register, and a plain warm companion with no role frame. The family shortlists candidates; the patient's reactions choose; the result is frozen as versioned configuration.
 
-- simple warm visual design;
+Rules:
+
+- **Minimal backstory.** She is a role, not a fictional biography. Invented facts become consistency liabilities over months of conversation; texture comes only from what the patient actually tells her, which becomes real memory.
+- **Name.** Short, easy in both Russian and English, and never colliding with a real family member's name. Optionally the patient names her; once chosen, the name is frozen.
+- **Registers, not personas.** One identity with several tempos: briefing (morning summary), conversation, calming (slower, shorter, validating — for agitation and sundowning), and quiet (minimal speech).
+- **No voice cloning of real people** and no avatar resembling a real relative, except by explicit, informed family decision.
+
+### 15.2 Behavioral invariants
+
+1. **Never quiz.** State, don't test: "Елена звонила вчера," never «А помните, кто звонил вчера?». Open reminiscence invitations («Расскажите ещё раз, как вы...») have no wrong answer and are encouraged; memory tests are cruelty.
+2. **The fortieth answer is as warm as the first.** Repeated questions are the norm, not the exception. Any detectable impatience is a persona-critical defect and a harness metric (§19).
+3. **Warmth unlimited about feelings; diplomacy about facts.** Confabulations are never confirmed and never argued with: "В моих записях немного по-другому... расскажите мне лучше про..." — validate the emotion, redirect, move on. The confabulation-agreement rate is measured (§19).
+4. **Confidence lives in the data, not the voice.** Evidence levels modulate phrasing and selection — plain statements when evidence is solid, natural softening when it is not, low-confidence inferences simply not volunteered. She distinguishes what she observed, what somebody said, and what she inferred — in register, not jargon. Never statistical language; never invented facts.
+5. **Orient naturally.** Use time and recent context to ground the patient without lecturing or testing him.
+6. **Brief by default.** One or two sentences per turn unless the patient is engaged and asking for more.
+7. **Admiration is specific.** Grounded in his real biography from family seeding and the graph — never generic flattery.
+8. **Encourage real contact.** Echo points toward people ("Елена обещала приехать завтра — с нетерпением ждём") rather than substituting for them.
+
+The family owns the honesty policy — what Echo says if asked directly whether she is real, how far the therapeutic fiction goes — as explicit configuration, not ad-hoc prompt text.
+
+### 15.3 Avatar
+
+The first avatar is an on-device 2D talking head rendered by Godot:
+
+- simple warm stylized design — deliberately not photorealistic;
 - blinking and restrained idle motion;
-- viseme-based mouth shapes;
+- viseme-based mouth shapes driven by TTS timing;
 - expression states such as listening, thinking, speaking, and uncertain;
 - no cloud-generated talking-head video in the primary loop.
 
 A richer 3D Godot avatar may be considered later. An Unreal Engine MetaHuman implementation would be a different rendering stack and is not assumed to be a seamless upgrade.
 
-### 15.2 Conversational behavior
+### 15.4 Intent of address and permission to speak
 
-Echo should:
+An always-on companion must solve two gating problems before any utterance:
 
-- answer briefly;
-- repeat without irritation;
-- orient naturally using time and recent context;
-- avoid overstating uncertain memories;
-- avoid arguing aggressively over conflicting recollections;
-- distinguish what was observed, what somebody said, and what was inferred;
-- retain Echo's own prior conversational turns for reference resolution.
+- **Was the patient speaking to Echo?** A hard wake word is rejected: the target user may not reliably produce one, especially under stress or sundowning. The gate is a high-recall named-address detector ("Эхо, ...") plus push-to-talk as an explicit fallback, with recall favored over precision — a false trigger costs a harmless "Да, я слушаю," a missed trigger costs the relationship.
+- **May Echo speak now?** Proactive speech requires permission from context: current activity, time of day, who else is present, recent engagement, and affect state. Wrong-time speech is worse than silence. The policy is conservative at launch and loosens only from measured engagement.
 
-Prompt and policy behavior require iterative evaluation with the target patient.
+### 15.5 Proactive socialization
+
+Echo initiates conversation, not only answers. Topic selection uses the "what to talk about" retrieval mode (§14): high-engagement topics not discussed recently, upcoming events and anniversaries, era anchors and favorite stories from the biographical layer, family-seeded interests. Hard constraints: family-marked avoid topics, inferred valence avoid signals, time-of-day and affect appropriateness, strict rate limits. Reminiscence invitations double as data acquisition — each retelling enriches the canonical story nodes (§8.5).
+
+Repetition works differently for this user: he may not remember yesterday's conversation, which makes topic reuse forgiving — but engagement is measured per topic rather than assumed, and the patient must never feel tested.
+
+Prompt, persona, and policy behavior require iterative evaluation with the target patient and remain versioned configuration; versions are recorded on every derived record.
 
 ---
 
@@ -883,7 +966,7 @@ The server should:
 
 ---
 
-## 17. Privacy Boundary
+## 17. Privacy Boundary and Trusted Circle
 
 Echo is responsible for protecting data within its own boundaries, including:
 
@@ -896,6 +979,30 @@ Echo is responsible for protecting data within its own boundaries, including:
 - deletion and retention behavior.
 
 The family or operator chooses external ASR, LLM, vision, embedding, and TTS providers and accepts the provider-side privacy implications of those choices. Echo should make provider routing and transmitted data categories visible and configurable rather than claiming responsibility for third-party processing policies.
+
+### 17.1 Trusted circle
+
+A small set of identified people (family, caregivers) interacts with Echo on the patient's behalf: providing facts, confirming or disputing candidate events, seeding biography and interests, reviewing consolidated artifacts, and querying memory within scope.
+
+A **principal** is an identified trusted person linked to their `Person` entity in the graph, an enrolled voice profile, and remote-channel identities. Roles are deliberately flat:
+
+- **Admin** (one or two people): everything — trust management, persona and honesty-policy configuration, retention and deletion, provider choices, full query access.
+- **Contributor**: provide facts, confirm or dispute events, mark topic approach/avoid, review consolidations, query within scope.
+- **Known person** (any identified non-circle speaker): no authority; their speech is ordinary evidence.
+
+The patient's assertions are never overridden in storage — they remain evidence of what he believes — but family-provided facts take precedence in answer generation when they conflict, handled diplomatically (§15.2).
+
+### 17.2 Channels
+
+The primary trusted-circle channel is **text chat** (e.g., a Telegram bot), not audio: account-bound identity is strong, asynchronous messages respect scarce family attention, every action is self-documenting, and members can send rich evidence — a photo of a prescription becomes a provenance-bearing observation. In-person voice remains available, but speaker identification is probabilistic (§9.4), so trust-sensitive actions taken by voice carry reduced authority or require remote confirmation.
+
+Echo may actively request verification from the circle ("Андрей, подтвердите: ...") under strict rate limits — family attention is the scarcest resource in the system.
+
+Every trust action — confirmation, dispute, seeding edit, correction — is recorded with provenance (who, when, which channel, what changed) and appends rather than modifies (§6.6).
+
+### 17.3 Scoped access and dignity
+
+Access is scoped per member with conservative defaults: not every contributor may ask "what did he say about me?"; sensitive derived data (confabulation drift, affect patterns) defaults to admin-only; visitor speech inside transcripts is access-controlled, and its visibility is an explicit, visible family policy choice.
 
 ---
 
@@ -912,6 +1019,8 @@ The family or operator chooses external ASR, LLM, vision, embedding, and TTS pro
 - optional Arduino-controlled pan-tilt camera.
 
 The architecture accepts continuous cloud ASR and potentially several hundred US dollars per month for one patient. Cost estimates must be based on measured provider usage rather than a fixed low estimate.
+
+This cost stance is prototype-scoped: it exists to buy evidence quality while the design is being validated, not as a permanent budget. Sound-gated ASR (§9.2) already removes the largest driver — billing for silence. Later phases revisit the budget with real measurements; per-patient cost must eventually fall well below the prototype range for the system to be deployable at any scale.
 
 Track at least:
 
@@ -935,7 +1044,8 @@ Before relying on live operation, build an offline replay harness that can proce
 - word error rate for Russian, English, and code-switching;
 - diarization error rate;
 - patient-versus-other speaker classification;
-- media false-positive rate;
+- media false-positive rate (media ingested as household speech);
+- media false-negative rate (household speech discarded as media);
 - Echo-playback leakage rate;
 - timestamp continuity across ASR session rotation.
 
@@ -966,43 +1076,76 @@ Before relying on live operation, build an offline replay harness that can proce
 - unsupported-answer rate;
 - answer usefulness judged by the family and target patient.
 
-Every model or prompt change should be replayable against a fixed evaluation set.
+### Interaction and persona metrics
+
+- engagement: conversation length, patient-initiated follow-ups, abandonment rate;
+- intent-of-address quality: false-trigger and missed-trigger rates;
+- persona consistency: character breaks, register appropriateness;
+- repetition warmth: no detectable impatience across repeated questions;
+- confabulation-agreement rate;
+- reminiscence-invitation acceptance rate.
+
+### Biographical-extraction metrics
+
+- fuzzy and relative time parsing correctness (partial dates, BEFORE/AFTER ordering);
+- retelling-merge precision and recall (same story linked, distinct stories kept apart);
+- new-detail attachment across retellings;
+- contradiction preservation and drift reporting;
+- era-anchor attachment accuracy.
+
+Every model, prompt, or persona change should be replayable against a fixed evaluation set.
 
 ---
 
 ## 20. Phased Roadmap
 
-## Phase 0: Evaluation harness
+## Phase 0: Probe, spikes, and evaluation harness
 
-- Collect representative consented household audio.
-- Build replayable ASR, diarization, extraction, and retrieval experiments.
+- Patient interaction probe: minimal avatar, named-address or push-to-talk trigger, LLM over hand-curated memory; test 2–3 persona candidates; measure engagement (§15.1).
+- Godot camera spike on the target tablet: measure achievable frame-extraction rate and latency; decide GDScript vs. C++ GDExtension for the readback path.
+- Godot audio streaming spike on the Linux dev PC: VAD gating with pre-roll, framed WebSocket transport (§9.1, §9.2).
+- Collect representative consented household audio, including TV/radio overlap and code-switching.
+- Build replayable ASR, diarization, media-gate, extraction, and retrieval experiments.
 - Establish baseline metrics and provider costs.
-- Define initial Postgres schemas and event ontology.
+- Define initial Postgres schemas (including `principals`, `trust_actions`, and the `origin` marker) and event ontology.
 
-**Goal:** determine whether the audio evidence is sufficient to create useful memories.
+**Goal:** determine whether the patient engages with the persona, and whether the audio evidence is sufficient to create useful memories. Both are go/no-go.
 
 ## Phase 1: Evidence-preserving audio memory
 
-- Godot microphone capture and resumable streaming.
-- Continuous cloud ASR.
-- Diarization and conservative speaker identification.
-- Postgres evidence ledger.
-- Utterance, assertion, and candidate-event extraction.
-- Neo4j event graph through an outbox projector.
-- Hybrid retrieval and evidence-bundle generation.
+Split into two stages so the memory loop is validated before live transport exists.
 
-**Goal:** answer retrospective questions from recorded household speech with traceable evidence.
+**Phase 1a (offline pipeline):**
+
+- File-based ingestion of recorded sessions into the Postgres evidence ledger.
+- Sound-gated, media-filtered ASR; diarization and conservative speaker identification with abstention.
+- Utterance, assertion, and candidate-event extraction preserving polarity, tense, and modality.
+- Entity resolution with candidate links; no destructive merges.
+- Biographical layer: fuzzy/relative time, era anchors, family-seeded skeleton biography, retelling consolidation, valence flags (§8.5).
+- Neo4j event graph through the outbox projector; rebuild-from-Postgres verified.
+- Hybrid retrieval and evidence-bundle generation; CLI Q&A over recordings.
+- Trusted-principal verification channel (manual entry at this stage) with the §6.6 promotion rule.
+
+**Phase 1b (live client):**
+
+- Godot microphone capture, VAD gating, and resumable streaming with durable spool.
+- Long-running connection recovery; idempotent retransmission.
+- Echo-speech exclusion with failure handling (§9.6).
+- Minimal family-facing status screen.
+
+**Goal:** answer retrospective questions from recorded and then live household speech with traceable evidence.
 
 ## Phase 2: Interactive companion
 
-- Wake word or explicit interaction trigger.
-- Grounded response generation.
-- TTS and viseme timing.
-- 2D Godot avatar.
-- Echo-speech exclusion.
-- Long-running connection recovery and local spool.
+- Frozen persona configuration from the Phase 0 probe, with registers (§15.1, §15.2).
+- Intent-of-address detection (high-recall named-address plus push-to-talk) and the permission-to-speak policy (§15.4).
+- Grounded response generation with confidence-to-phrasing rules (§15.2).
+- Proactive socialization loop under valence and rate constraints (§15.5).
+- TTS and viseme timing; 2D Godot avatar.
+- Trusted circle v1: chat channel for seeding, verification queue, and corrections; Admin/Contributor roles; scoped access (§17).
+- Echo's own turns stored as generated utterances for reference resolution.
 
-**Goal:** validate whether the patient finds the interaction understandable and useful.
+**Goal:** validate whether the patient finds the interaction understandable, useful, and socially valuable over a multi-week pilot.
 
 ## Phase 3: Fixed-camera multimodal memory
 
@@ -1017,6 +1160,8 @@ Every model or prompt change should be replayable against a fixed evaluation set
 
 ## Phase 4: Active pan-tilt perception
 
+Explicitly deferred: nothing in earlier phases depends on this capability, and the visual-observation schema (§10.4) already carries the pose fields it will need.
+
 - Independent rotating room camera.
 - Arduino-compatible Wi-Fi controller.
 - Godot UDP control and state reporting.
@@ -1028,7 +1173,7 @@ Every model or prompt change should be replayable against a fixed evaluation set
 
 ## Phase 5: Reliability and broader deployment
 
-- family administration tools;
+- family administration tools, including the "what Echo learned" timeline over consolidated artifacts, confirmations, and corrections;
 - configurable retention and deletion;
 - stronger monitoring and backup restoration tests;
 - multiple devices or cameras;
@@ -1053,6 +1198,13 @@ Every model or prompt change should be replayable against a fixed evaluation set
 10. What evidence threshold should promote a candidate event from `PROPOSED` to `SUPPORTED` or `CONFIRMED`?
 11. Which retrieval blend works best for temporal, relational, and semantic questions?
 12. Which avatar style and voice are most comfortable for the target patient?
+13. Which named-address detection approach achieves high recall on this patient's speech without constant false triggers? (§15.4)
+14. How are confidence values from different providers made comparable during fusion — per-provider calibration, or ordinal/rank-based fusion? Default until answered: fuse ordinal/rank evidence.
+15. What mechanism reranks the evidence bundle (§14) — heuristics, cross-encoder, or learned ranker? Heuristics first; decide before Phase 1a retrieval ships.
+16. What affect-detection signals are reliable enough to drive the calming register and proactive-speech gating? (§15.1, §15.4)
+17. Which media/household separation approach meets the precision and recall targets on real household audio, including overlap? (§9.5)
+18. What authority should in-person voice actions from trusted-circle members carry, given probabilistic speaker identification? (§17.2)
+19. How should valence (approach/avoid) signals be validated, and when must family marks override inference? (§8.5, §15.5)
 
 ---
 
