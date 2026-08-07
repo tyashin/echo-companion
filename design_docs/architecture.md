@@ -40,7 +40,7 @@ Echo should:
 6. Communicate briefly, warmly, and patiently.
 7. Operate unattended for long periods and recover from network or process failures.
 8. Support progressively richer perception without requiring a client rewrite.
-9. Provide proactive socialization: initiate and sustain conversations on topics the patient finds engaging, drawing on the memory graph and family-provided knowledge of his interests and biography.
+9. Provide proactive socialization: initiate and sustain conversations on topics the patient finds engaging, drawing on the memory graph and family-provided knowledge of the patient's interests and biography.
 
 ### Non-goals for the first implementation
 
@@ -295,7 +295,7 @@ The system must preserve polarity and modality. These utterances must not create
 
 The trusted circle (see §17) is a first-class evidence channel. Facts entered by a trusted family member — prescribed medications, appointments, the biography skeleton, topic approach/avoid marks — are stored with `origin: FAMILY_PROVIDED` and their own provenance (who, when, which channel). They typically enter at `SUPPORTED` or `CONFIRMED` and serve as external ground truth that sensors cannot provide: a family-maintained medication plan, for example, allows "medication taken" candidate events to be cross-checked against an actual prescription schedule.
 
-Confirmation or dispute by a trusted principal is the first concrete rule for promoting candidate events between the statuses in §6.5. Trust actions never modify or delete existing evidence; they append new provenance-bearing records, and the patient's own contradicting assertions remain stored as evidence of what he believes.
+Confirmation or dispute by a trusted principal is the first concrete rule for promoting candidate events between the statuses in §6.5. Trust actions never modify or delete existing evidence; they append new provenance-bearing records, and the patient's own contradicting assertions remain stored as evidence of the patient's beliefs.
 
 ---
 
@@ -439,7 +439,7 @@ Projection sequence:
 
 ### 8.5 Biographical events and life stories
 
-The patient will discuss events from his entire life. These enter through the assertion path (§6.2): what he says about his past is evidence that he said it. Two timelines are kept distinct — `told_at` (when he said it; precise, observed) and `occurred_at` (when it happened; often fuzzy, reported).
+The patient will discuss events from their entire life. These enter through the assertion path (§6.2): what they say about their past is evidence that they said it. Two timelines are kept distinct — `told_at` (when they said it; precise, observed) and `occurred_at` (when it happened; often fuzzy, reported).
 
 Requirements:
 
@@ -454,7 +454,7 @@ Requirements:
 Single-patient scale (worst case: low millions of nodes over years) is far below Neo4j limits; the risks are schema and operations, not performance.
 
 - Uniqueness constraints on every stable ID projected from Postgres; the §8.4 projector's `MERGE` path must never degrade into scans.
-- The patient's `Person` node will accumulate very large numbers of relationships (supernode). Queries lead with an indexed `Event.occurred_at` range rather than traversing outward from him; add a time-tree layer only if measurements demand it.
+- The patient's `Person` node will accumulate very large numbers of relationships (supernode). Queries lead with an indexed `Event.occurred_at` range rather than traversing outward from the patient's node; add a time-tree layer only if measurements demand it.
 - Variable-length traversals in retrieval are capped (2–3 hops) and anchored on indexed properties.
 - Community Edition has no online hot backup: schedule regular dumps, and rely on the rebuild-from-Postgres invariant as the primary recovery path.
 - Vector search stays in pgvector; do not maintain a second embedding index in Neo4j.
@@ -836,7 +836,7 @@ Projects stable IDs, events, entities, and relationships into Neo4j through the 
 
 Builds daily digests, recurring routines, canonical life stories (merging repeated tellings; see §8.5), and higher-level patterns. Consolidation produces new derived records and graph structures; it does not discard contradictory source history.
 
-Consolidated artifacts are human-readable, versioned records stored in Postgres and rendered as text the family can review: digests, learned routines, "topics that engage him," "what calms him." The family can correct or reject them through the trusted-circle channel (§17); corrections are appended with provenance, never overwritten. The pattern worth copying from personal-agent systems (e.g., Hermes Agent's inspectable, approvable learned artifacts) is the curation UX, not the file storage.
+Consolidated artifacts are human-readable, versioned records stored in Postgres and rendered as text the family can review: digests, learned routines, "topics that engage the patient," "what calms the patient." The family can correct or reject them through the trusted-circle channel (§17); corrections are appended with provenance, never overwritten. The pattern worth copying from personal-agent systems (e.g., Hermes Agent's inspectable, approvable learned artifacts) is the curation UX, not the file storage.
 
 ---
 
@@ -873,7 +873,7 @@ Answers should distinguish source types where useful:
 
 Echo has exactly one patient-facing persona: a stable, predictable identity that never changes. Multiple characters would be a confusion engine for this user; consistency itself is the therapeutic value.
 
-The baseline persona — validated against alternatives during the Phase 0 probe — is a devoted personal secretary: warm, mature female voice; respectful Russian «вы» register; unhurried speech. The frame preserves the patient's status (he is the boss whose affairs deserve tracking, not a patient being monitored) and makes the system's capabilities legible in character: she keeps notes (observations), remembers what people told her (assertions), and checks her records before answering. Alternatives tested in the probe: a peer/old-friend register, and a plain warm companion with no role frame. The family shortlists candidates; the patient's reactions choose; the result is frozen as versioned configuration.
+The baseline persona — validated against alternatives during the Phase 0 probe — is a devoted personal secretary: warm, mature female voice; respectful Russian «вы» register; unhurried speech. The frame preserves the patient's status (the boss whose affairs deserve tracking, not a patient being monitored) and makes the system's capabilities legible in character: the secretary keeps notes (observations), remembers what people told her (assertions), and checks her records before answering. Alternatives tested in the probe: a peer/old-friend register, and a plain warm companion with no role frame. The family shortlists candidates; the patient's reactions choose; the result is frozen as versioned configuration. The first deployment targets an elderly Russian-speaking woman; voice, name, and role-frame specifics are validated with her in the probe.
 
 Rules:
 
@@ -888,9 +888,9 @@ Rules:
 2. **The fortieth answer is as warm as the first.** Repeated questions are the norm, not the exception. Any detectable impatience is a persona-critical defect and a harness metric (§19).
 3. **Warmth unlimited about feelings; diplomacy about facts.** Confabulations are never confirmed and never argued with: "В моих записях немного по-другому... расскажите мне лучше про..." — validate the emotion, redirect, move on. The confabulation-agreement rate is measured (§19).
 4. **Confidence lives in the data, not the voice.** Evidence levels modulate phrasing and selection — plain statements when evidence is solid, natural softening when it is not, low-confidence inferences simply not volunteered. She distinguishes what she observed, what somebody said, and what she inferred — in register, not jargon. Never statistical language; never invented facts.
-5. **Orient naturally.** Use time and recent context to ground the patient without lecturing or testing him.
+5. **Orient naturally.** Use time and recent context to ground the patient without lecturing or testing.
 6. **Brief by default.** One or two sentences per turn unless the patient is engaged and asking for more.
-7. **Admiration is specific.** Grounded in his real biography from family seeding and the graph — never generic flattery.
+7. **Admiration is specific.** Grounded in the patient's real biography from family seeding and the graph — never generic flattery.
 8. **Encourage real contact.** Echo points toward people ("Елена обещала приехать завтра — с нетерпением ждём") rather than substituting for them.
 
 The family owns the honesty policy — what Echo says if asked directly whether she is real, how far the therapeutic fiction goes — as explicit configuration, not ad-hoc prompt text.
@@ -918,7 +918,7 @@ An always-on companion must solve two gating problems before any utterance:
 
 Echo initiates conversation, not only answers. Topic selection uses the "what to talk about" retrieval mode (§14): high-engagement topics not discussed recently, upcoming events and anniversaries, era anchors and favorite stories from the biographical layer, family-seeded interests. Hard constraints: family-marked avoid topics, inferred valence avoid signals, time-of-day and affect appropriateness, strict rate limits. Reminiscence invitations double as data acquisition — each retelling enriches the canonical story nodes (§8.5).
 
-Repetition works differently for this user: he may not remember yesterday's conversation, which makes topic reuse forgiving — but engagement is measured per topic rather than assumed, and the patient must never feel tested.
+Repetition works differently for this user: the patient may not remember yesterday's conversation, which makes topic reuse forgiving — but engagement is measured per topic rather than assumed, and the patient must never feel tested.
 
 Prompt, persona, and policy behavior require iterative evaluation with the target patient and remain versioned configuration; versions are recorded on every derived record.
 
@@ -990,7 +990,7 @@ A **principal** is an identified trusted person linked to their `Person` entity 
 - **Contributor**: provide facts, confirm or dispute events, mark topic approach/avoid, review consolidations, query within scope.
 - **Known person** (any identified non-circle speaker): no authority; their speech is ordinary evidence.
 
-The patient's assertions are never overridden in storage — they remain evidence of what he believes — but family-provided facts take precedence in answer generation when they conflict, handled diplomatically (§15.2).
+The patient's assertions are never overridden in storage — they remain evidence of what the patient believes — but family-provided facts take precedence in answer generation when they conflict, handled diplomatically (§15.2).
 
 ### 17.2 Channels
 
@@ -1002,7 +1002,7 @@ Every trust action — confirmation, dispute, seeding edit, correction — is re
 
 ### 17.3 Scoped access and dignity
 
-Access is scoped per member with conservative defaults: not every contributor may ask "what did he say about me?"; sensitive derived data (confabulation drift, affect patterns) defaults to admin-only; visitor speech inside transcripts is access-controlled, and its visibility is an explicit, visible family policy choice.
+Access is scoped per member with conservative defaults: not every contributor may ask "what did the patient say about me?"; sensitive derived data (confabulation drift, affect patterns) defaults to admin-only; visitor speech inside transcripts is access-controlled, and its visibility is an explicit, visible family policy choice.
 
 ---
 

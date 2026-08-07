@@ -10,7 +10,7 @@ This is not a waterfall plan. The direction is fixed; the scope inside each incr
 
 What can kill the project, in the order it should be retired:
 
-1. **Patient engagement** — does he talk to it, does it help or confuse? (Phase 0 probe)
+1. **Patient engagement** — does the patient talk to it, does it help or confuse? (Phase 0 probe)
 2. **Audio pipeline quality on real household audio** — ASR, diarization, media gate, overlap. (Phase 0 harness)
 3. **Godot camera path on the target tablet** — the riskiest client dependency. (Phase 0 spike)
 4. Everything else is engineering.
@@ -53,7 +53,7 @@ What can kill the project, in the order it should be retired:
 
 - Minimal interactive prototype (desktop or tablet): placeholder avatar, named-address or push-to-talk trigger, ASR → LLM → TTS loop over a hand-curated memory file (a few family-provided facts and recent events).
 - Test 2–3 persona candidates per §15.1 (devoted secretary; peer/old friend; plain warm companion) in short sessions over one to two weeks.
-- Measure: does he address it spontaneously; conversation length; engagement vs. confusion or distress; which persona register works.
+- Measure: does the patient address it spontaneously; conversation length; engagement vs. confusion or distress; which persona register works.
 
 *Done when:* a persona is chosen and frozen as configuration v1, and engagement evidence says proceed — or stop, which is a legitimate and cheap outcome. **Go/no-go gate.**
 
