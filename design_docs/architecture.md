@@ -922,6 +922,28 @@ Repetition works differently for this user: the patient may not remember yesterd
 
 Prompt, persona, and policy behavior require iterative evaluation with the target patient and remain versioned configuration; versions are recorded on every derived record.
 
+### 15.6 Interactive-loop latency budget
+
+Latency is part of the persona contract. For this user a 2–3 s pause reads as a normal conversational beat — the persona is explicitly unhurried — but past ~5 s she may repeat the question or conclude she was not heard. The budget is defined on the interactive question-answer loop and measured from the end of the patient's speech to the start of TTS playback:
+
+- first audio within 2 s at p50 and within 4 s at p95;
+- an in-persona acknowledgment («Сейчас посмотрю…») may precede the answer; it starts within 0.5 s of end-of-speech, keeping perceived latency under 1 s even when the full answer takes 2–3 s;
+- a strictly sequential pipeline (batch ASR, full-answer generation, non-streaming TTS) is expected to take 5–10 s and is acceptable only as Phase 0 probe scaffolding, never for the Phase 2 companion.
+
+Meeting the budget requires pipelining, not faster individual stages:
+
+- **Streaming ASR with partial transcripts.** The §9.2 continuous gated stream means the transcript largely exists by end-of-speech; ASR contributes only finalization (~0.3 s), not full processing time.
+- **Speculative retrieval on partials.** §14 retrieval starts on partial transcripts before the question ends; by end-of-speech the evidence bundle is normally ready and retrieval is off the critical path. Any LLM-based reranking (§21.15) must stay off this path.
+- **Sentence-streamed generation.** The LLM token stream is cut at sentence boundaries and fed to streaming TTS; the critical path is LLM time-to-first-token plus TTS time-to-first-byte, not full-answer generation.
+- **Answer caching.** Repeated questions are the norm (§15.2). Answers are cached keyed by question intent and evidence version, invalidated when new relevant evidence arrives; a cache hit starts playback in under 0.5 s. Caching also serves §15.2 repetition warmth: the fortieth answer is instant, never degraded.
+- **Pre-rendered acknowledgment clips.** A small set of persona-consistent fillers is stored on the device and played at endpointing; no TTS latency on that path.
+- **Persistent provider connections.** ASR, LLM, and TTS connections are long-lived; per-call handshake time never appears in the loop.
+- **Adaptive endpointing.** The end-of-speech wait is tuned to the patient's pause pattern; catching true endings takes priority over shaving the wait.
+
+LLM placement — cloud fast-tier versus a local model on one GPU — stays a provider-adapter decision (§5.2), settled by probe measurements rather than fixed here. Local execution mainly buys p95 stability and privacy (patient transcripts stay in the house) at a modest p50 gain; self-hosting very large models is not cost-effective on this critical path. Russian register quality of any candidate is validated in the Phase 0 probe before adoption.
+
+Every interactive turn records per-stage timings (endpointing, ASR finalization, retrieval, LLM first token, TTS first byte, playback start); the budget is enforced from these measurements (§19), not assumed.
+
 ---
 
 ## 16. Transport and Reliability
@@ -1083,7 +1105,10 @@ Before relying on live operation, build an offline replay harness that can proce
 - persona consistency: character breaks, register appropriateness;
 - repetition warmth: no detectable impatience across repeated questions;
 - confabulation-agreement rate;
-- reminiscence-invitation acceptance rate.
+- reminiscence-invitation acceptance rate;
+- interactive-loop latency: end-of-speech to first-audio p50 and p95 against the §15.6 budget;
+- per-stage latency breakdown recorded per interactive turn;
+- answer cache-hit rate for repeated questions.
 
 ### Biographical-extraction metrics
 
@@ -1101,7 +1126,7 @@ Every model, prompt, or persona change should be replayable against a fixed eval
 
 ## Phase 0: Probe, spikes, and evaluation harness
 
-- Patient interaction probe: minimal avatar, named-address or push-to-talk trigger, LLM over hand-curated memory; test 2–3 persona candidates; measure engagement (§15.1).
+- Patient interaction probe: minimal avatar, named-address or push-to-talk trigger, LLM over hand-curated memory; test 2–3 persona candidates; measure engagement (§15.1) and per-stage provider latency against the §15.6 budget.
 - Godot camera spike on the target tablet: measure achievable frame-extraction rate and latency; decide GDScript vs. C++ GDExtension for the readback path.
 - Godot audio streaming spike on the Linux dev PC: VAD gating with pre-roll, framed WebSocket transport (§9.1, §9.2).
 - Collect representative consented household audio, including TV/radio overlap and code-switching.
@@ -1142,6 +1167,7 @@ Split into two stages so the memory loop is validated before live transport exis
 - Grounded response generation with confidence-to-phrasing rules (§15.2).
 - Proactive socialization loop under valence and rate constraints (§15.5).
 - TTS and viseme timing; 2D Godot avatar.
+- Interactive-loop pipelining per §15.6: streaming ASR partials, speculative retrieval, sentence-streamed LLM→TTS, answer caching, pre-rendered acknowledgment clips.
 - Trusted circle v1: chat channel for seeding, verification queue, and corrections; Admin/Contributor roles; scoped access (§17).
 - Echo's own turns stored as generated utterances for reference resolution.
 
@@ -1205,6 +1231,7 @@ Explicitly deferred: nothing in earlier phases depends on this capability, and t
 17. Which media/household separation approach meets the precision and recall targets on real household audio, including overlap? (§9.5)
 18. What authority should in-person voice actions from trusted-circle members carry, given probabilistic speaker identification? (§17.2)
 19. How should valence (approach/avoid) signals be validated, and when must family marks override inference? (§8.5, §15.5)
+20. What per-stage latency do the chosen ASR, LLM, and TTS providers achieve on the patient's Russian, and does the pipelined loop meet the §15.6 budget? Measured in the Phase 0 probe; re-checked in the Phase 2 pilot.
 
 ---
 

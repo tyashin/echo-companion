@@ -53,7 +53,7 @@ What can kill the project, in the order it should be retired:
 
 - Minimal interactive prototype (desktop or tablet): placeholder avatar, named-address or push-to-talk trigger, ASR → LLM → TTS loop over a hand-curated memory file (a few family-provided facts and recent events).
 - Test 2–3 persona candidates per §15.1 (devoted secretary; peer/old friend; plain warm companion) in short sessions over one to two weeks.
-- Measure: does the patient address it spontaneously; conversation length; engagement vs. confusion or distress; which persona register works.
+- Measure: does the patient address it spontaneously; conversation length; engagement vs. confusion or distress; which persona register works; per-stage ASR/LLM/TTS latency feeding the §15.6 budget.
 
 *Done when:* a persona is chosen and frozen as configuration v1, and engagement evidence says proceed — or stop, which is a legitimate and cheap outcome. **Go/no-go gate.**
 
@@ -122,11 +122,12 @@ Split so the memory loop is validated offline before live transport exists.
 1. **Persona configuration v1** (frozen from the probe): secretary persona, registers (briefing / conversation / calming / quiet), behavioral invariants (§15.2), family-owned honesty policy.
 2. **Intent of address** (§15.4): high-recall named-address detector plus push-to-talk fallback; "may Echo speak now" policy v1 (activity, time of day, who else is present, recent engagement, affect).
 3. **Grounded response generation** from evidence bundles, with confidence-to-phrasing rules (§15.2 rule 4).
-4. **TTS + viseme timing; 2D Godot avatar** — stylized and warm, not photorealistic, not resembling a relative.
-5. **Proactive socialization loop** (§15.5): "what to talk about" retrieval from the graph, valence approach/avoid constraints, strict rate limiting, reminiscence invitations.
-6. **Trusted circle v1** (§17): text-chat channel (Telegram bot or similar) as the primary family interface — seeding (biography, interests, medication schedules), verification queue (confirm/dispute candidate events), corrections; Admin/Contributor roles; scoped query access with conservative defaults; every trust action recorded as evidence.
-7. **Echo's own turns** stored as generated utterances for reference resolution across conversations.
-8. **Evaluation additions** per §19: engagement metrics, persona consistency, repetition warmth, confabulation-agreement rate, intent-of-address quality — automated in the harness where possible, family-judged otherwise.
+4. **Interactive-loop latency** (§15.6): pipelined turn path — streaming ASR partials, speculative retrieval, sentence-streamed LLM→TTS, answer cache for repeated questions, pre-rendered acknowledgment clips; per-stage timings recorded per turn and checked against the budget.
+5. **TTS + viseme timing; 2D Godot avatar** — stylized and warm, not photorealistic, not resembling a relative.
+6. **Proactive socialization loop** (§15.5): "what to talk about" retrieval from the graph, valence approach/avoid constraints, strict rate limiting, reminiscence invitations.
+7. **Trusted circle v1** (§17): text-chat channel (Telegram bot or similar) as the primary family interface — seeding (biography, interests, medication schedules), verification queue (confirm/dispute candidate events), corrections; Admin/Contributor roles; scoped query access with conservative defaults; every trust action recorded as evidence.
+8. **Echo's own turns** stored as generated utterances for reference resolution across conversations.
+9. **Evaluation additions** per §19: engagement metrics, persona consistency, repetition warmth, confabulation-agreement rate, intent-of-address quality — automated in the harness where possible, family-judged otherwise.
 
 *Done when:* a multi-week pilot with the patient completes; the family reviews engagement and safety metrics weekly; go/no-go is recorded for Phase 3 (vision).
 

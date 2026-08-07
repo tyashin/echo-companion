@@ -52,3 +52,4 @@ Legend: **SETTLED** — decided and written into the docs; **PARTIAL** — direc
 15. How should valence (approach/avoid) signals be validated, and when must family marks override inference? (§8.5, §15.5, §21.19)
 16. What authority should in-person voice actions from trusted-circle members carry, given probabilistic speaker identification? (§17.2, §21.18)
 17. How accurate is retelling-merge in practice, and what is the cost of wrongly merging two distinct stories vs. failing to merge one? (§8.5)
+18. What per-stage latency do the chosen ASR/LLM/TTS providers achieve on the patient's Russian, and does the pipelined interactive loop meet the §15.6 budget (first audio < 2 s p50, < 4 s p95)? (§15.6, §21.20)
