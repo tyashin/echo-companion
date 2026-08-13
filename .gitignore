@@ -17,6 +17,7 @@ env/
 # Environment variables / secrets
 .env
 .env.*
+!.env.example
 secrets.toml
 secrets.yaml
 
@@ -53,8 +54,9 @@ desktop.ini
 # Node (if frontend tooling added later)
 node_modules/
 
-# Coverage / pytest
+# Coverage / pytest / lint
 .pytest_cache/
+.ruff_cache/
 htmlcov/
 .coverage
 .coverage.*

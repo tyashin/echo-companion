@@ -31,6 +31,8 @@ What can kill the project, in the order it should be retired:
 
 ### 0.1 Project skeleton and dev environment
 
+**Status: DONE (2026-08-13).** Server skeleton in `server/` (flat app layout, uv, Python 3.13, FastAPI, SQLAlchemy 2.0 async + Alembic, `/health` with Postgres check, pytest + ruff); `docker-compose.yml` at repo root runs Postgres 17 + pgvector (port 5432) and Neo4j 5 CE (host ports 17474/17687 — a non-Docker Neo4j occupies the defaults on the dev PC); Godot 4.7.1 client skeleton in `client/` runs headless; Godot MCP bridge ([tugcantopaloglu/godot-mcp](https://github.com/tugcantopaloglu/godot-mcp), 157 tools, 4.7-tested) installed at `~/godot/godot-mcp` with the `McpInteractionServer` autoload in the client and project-level `.kimi-code/mcp.json`; GitHub Actions CI (`.github/workflows/ci.yml`): ruff, pytest, `alembic upgrade head`, `alembic check`. Python dev happens locally under uv; only Postgres/Neo4j are containerized in dev.
+
 - Server repo: current-stable Python, FastAPI, Pydantic, SQLAlchemy/SQLModel with Alembic migrations; Postgres + pgvector; Neo4j Community Edition; docker-compose for local development.
 - Godot project skeleton (4.7.1+) that runs on the Linux dev PC, with a Godot MCP server (editor bridge) installed so the agent can inspect the scene tree, run the project, and read errors/screenshots from the live editor. Selection criteria: Godot 4.7.1+ support; GDScript-based game code per §5.1 (a C#-based plugin requires the .NET editor build but does not change the game-language decision).
 - CI: lint, unit tests, migration check.

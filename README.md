@@ -4,7 +4,7 @@ Echo Companion is an open-source, always-on AI companion for people living with 
 
 Echo is designed for a dedicated Android tablet or phone and communicates in **Russian and English** through a lip-synced avatar with a single, stable persona: a devoted personal secretary to the patient.
 
-> **Project status:** early design and experimentation. No production implementation exists yet.
+> **Project status:** Phase 0 (probe and spikes). The project skeleton exists — a FastAPI server skeleton with Postgres/pgvector and Neo4j in docker-compose, and a Godot 4.7.1 client skeleton — but no product features yet.
 
 ## Core Idea
 
@@ -73,10 +73,11 @@ echo-companion/
 │   ├── architecture.md
 │   ├── implementation_plan.md
 │   └── open_questions.md
-├── server/                 # Python server and processing workers
-├── client/                 # Godot Android client
-├── firmware/               # Optional pan-tilt controller firmware
-└── evaluation/             # Recorded-input replay and quality evaluation
+├── docker-compose.yml      # Postgres + pgvector and Neo4j for local development
+├── server/                 # Python server and processing workers (FastAPI, uv, Alembic)
+├── client/                 # Godot 4.7.1 client (Android target, Linux desktop development)
+├── firmware/               # Optional pan-tilt controller firmware (later phase)
+└── evaluation/             # Recorded-input replay and quality evaluation (later phase)
 ```
 
 ## Initial Roadmap

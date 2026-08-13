@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/home/tyashin/godot/godot-mcp/build/index.js"],
+      "env": {
+        "GODOT_PATH": "/home/tyashin/godot/Godot_v4.7.1-stable_linux.x86_64",
+        "GODOT_MCP_ALLOWED_DIRS": "/home/tyashin/ml_proj/echo_companion/client",
+        "DEBUG": "false"
+      }
+    }
+  }
+}
