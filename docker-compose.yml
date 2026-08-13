@@ -1,39 +1,51 @@
 # docker-compose for local development only (Phase 0.1).
 # Python apps run locally under uv during development; containers are for production.
 services:
-  postgres:
+  echo_postgres:
     image: pgvector/pgvector:pg17
+    container_name: echo_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: echo
       POSTGRES_PASSWORD: echo
       POSTGRES_DB: echo
-    ports:
-      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - echo_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    networks:
+      - echo_internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U echo -d echo"]
       interval: 5s
       timeout: 3s
       retries: 10
 
-  neo4j:
+  echo_neo4j:
     image: neo4j:5-community
+    container_name: echo_neo4j
+    restart: unless-stopped
     environment:
       NEO4J_AUTH: neo4j/echo-graph-dev
       NEO4J_server_memory_heap_max__size: 512m
+    volumes:
+      - echo_neo4j_data:/data
     ports:
       # Host ports offset by 10000: a non-Docker Neo4j already occupies 7474/7687 on this machine.
-      - "17474:7474"  # browser
-      - "17687:7687"  # bolt
-    volumes:
-      - neo4j_data:/data
+      - "127.0.0.1:17474:7474"  # browser
+      - "127.0.0.1:17687:7687"  # bolt
+    networks:
+      - echo_internal
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 20
 
+networks:
+  echo_internal:
+    driver: bridge
+
 volumes:
-  postgres_data:
-  neo4j_data:
+  echo_postgres_data:
+  echo_neo4j_data:
