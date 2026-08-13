@@ -62,5 +62,6 @@ htmlcov/
 .coverage.*
 coverage.xml
 
-# Local agent notes (not for the public repo)
+# Local agent notes and agent tooling (not for the public repo)
 AGENTS.md
+.kimi-code/
