@@ -47,7 +47,7 @@ Echo should:
 - Medical diagnosis.
 - Autonomous clinical decision-making.
 - Treating an LLM inference as a verified physical event.
-- A photorealistic cloud-rendered avatar.
+- Cloud-rendered avatar video at any fidelity; a photorealistic avatar is a later-phase, locally rendered goal (§15.3), not part of the first implementation.
 - Background Android operation with the application routinely hidden.
 - A server-language migration roadmap.
 - Cost minimization at the expense of model quality.
@@ -897,15 +897,21 @@ The family owns the honesty policy — what Echo says if asked directly whether 
 
 ### 15.3 Avatar
 
-The first avatar is an on-device 2D talking head rendered by Godot:
+The avatar roadmap is staged: deliberately simple in the early phases, photorealistic at the end state.
 
-- simple warm stylized design — deliberately not photorealistic;
-- blinking and restrained idle motion;
-- viseme-based mouth shapes driven by TTS timing;
-- expression states such as listening, thinking, speaking, and uncertain;
-- no cloud-generated talking-head video in the primary loop.
+Early phases:
 
-A richer 3D Godot avatar may be considered later. An Unreal Engine MetaHuman implementation would be a different rendering stack and is not assumed to be a seamless upgrade.
+- The Phase 0 probe uses a placeholder avatar — just enough to test engagement.
+- The Phase 2 avatar is an on-device 2D talking head rendered by Godot: simple warm stylized design, blinking and restrained idle motion, viseme-based mouth shapes driven by TTS timing, expression states such as listening, thinking, speaking, and uncertain.
+
+End state: a photorealistic, locally rendered 3D avatar — optionally a full-body figure rather than a head only. Since Unreal Engine 5.6 (2025), the MetaHuman license permits using MetaHuman characters and animations in other engines, including Godot, royalty-free. The intended path is therefore MetaHuman-class assets exported (FBX/USD) into the existing Godot client and driven by the same TTS viseme timing — no client-stack migration and no cloud-rendered video.
+
+Durable constraints at any fidelity:
+
+- no cloud-generated talking-head video in the primary loop (latency per §15.6, privacy);
+- rendering is local, on the device;
+- the avatar never resembles a real relative (§15.1), except by explicit, informed family decision;
+- adoption of the photorealistic avatar is gated on tablet GPU/thermal measurements and on probe/pilot evidence that the patient responds well to it — the uncanny-valley and misidentification risks do not expire with phases, because the patient cannot reason "this is just an animation."
 
 ### 15.4 Intent of address and permission to speak
 
@@ -1194,6 +1200,7 @@ Explicitly deferred: nothing in earlier phases depends on this capability, and t
 - Camera calibration and room-zone mapping.
 - Event-driven active-perception state machine.
 - Object search and uncertain-event follow-up views.
+- Smart-home sensor ingestion (thermometer and similar household sensors) as a new device class in the evidence ledger: timestamped, provenance-bearing indoor-context observations via an MQTT/Home Assistant bridge or direct integration. These supply the indoor context that open question 19 identifies as stronger than outdoor weather (e.g., room temperature when the patient says «мне холодно»).
 
 **Goal:** allow Echo to deliberately acquire better evidence outside the tablet camera's fixed view.
 

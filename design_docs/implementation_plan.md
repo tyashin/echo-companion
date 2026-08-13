@@ -32,7 +32,7 @@ What can kill the project, in the order it should be retired:
 ### 0.1 Project skeleton and dev environment
 
 - Server repo: current-stable Python, FastAPI, Pydantic, SQLAlchemy/SQLModel with Alembic migrations; Postgres + pgvector; Neo4j Community Edition; docker-compose for local development.
-- Godot project skeleton (4.7.1+) that runs on the Linux dev PC.
+- Godot project skeleton (4.7.1+) that runs on the Linux dev PC, with a Godot MCP server (editor bridge) installed so the agent can inspect the scene tree, run the project, and read errors/screenshots from the live editor. Selection criteria: Godot 4.7.1+ support; GDScript-based game code per §5.1 (a C#-based plugin requires the .NET editor build but does not change the game-language decision).
 - CI: lint, unit tests, migration check.
 
 *Done when:* `docker compose up` brings up Postgres and Neo4j; the server serves a health endpoint; the Godot project runs on desktop.
@@ -123,7 +123,7 @@ Split so the memory loop is validated offline before live transport exists.
 2. **Intent of address** (§15.4): high-recall named-address detector plus push-to-talk fallback; "may Echo speak now" policy v1 (activity, time of day, who else is present, recent engagement, affect).
 3. **Grounded response generation** from evidence bundles, with confidence-to-phrasing rules (§15.2 rule 4).
 4. **Interactive-loop latency** (§15.6): pipelined turn path — streaming ASR partials, speculative retrieval, sentence-streamed LLM→TTS, answer cache for repeated questions, pre-rendered acknowledgment clips; per-stage timings recorded per turn and checked against the budget.
-5. **TTS + viseme timing; 2D Godot avatar** — stylized and warm, not photorealistic, not resembling a relative.
+5. **TTS + viseme timing; 2D Godot avatar** — simple, warm, stylized, not resembling a relative. A photorealistic 3D avatar is a later-phase goal (§15.3).
 6. **Proactive socialization loop** (§15.5): "what to talk about" retrieval from the graph, valence approach/avoid constraints, strict rate limiting, reminiscence invitations.
 7. **Trusted circle v1** (§17): text-chat channel (Telegram bot or similar) as the primary family interface — seeding (biography, interests, medication schedules), verification queue (confirm/dispute candidate events), corrections; Admin/Contributor roles; scoped query access with conservative defaults; every trust action recorded as evidence.
 8. **Echo's own turns** stored as generated utterances for reference resolution across conversations.
@@ -138,4 +138,5 @@ Split so the memory loop is validated offline before live transport exists.
 - Vision pipeline beyond the Phase 0 camera spike (Phase 3).
 - Pan-tilt hardware (Phase 4 — deferred by decision; nothing earlier depends on it).
 - Multi-device, multi-household, administration polish, the "what Echo learned" timeline (Phase 5).
+- Photorealistic avatar work (later-phase goal, §15.3).
 - C++ GDExtension work, unless the camera spike proves it necessary.

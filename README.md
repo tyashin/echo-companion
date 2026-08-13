@@ -34,7 +34,7 @@ The intended loop is:
 - **Grounded recall:** combines structured filters, vector retrieval, graph traversal, and source evidence.
 - **Trusted circle:** family members provide facts, confirmations, and corrections through a text-chat channel, with trust levels and scoped access.
 - **Echo-speech exclusion:** stores Echo's generated utterances directly but prevents them from being re-ingested as environmental speech.
-- **Patient-facing avatar:** a warm 2D talking head with lip sync, implemented in Godot.
+- **Patient-facing avatar:** a warm 2D talking head with lip sync in the early phases; the long-term direction is a locally rendered photorealistic 3D avatar (MetaHuman-class, Godot) — never cloud-rendered video.
 - **Optional active camera (deferred):** an independently mounted pan-tilt camera controlled by an Arduino-compatible Wi-Fi board for targeted room observation.
 
 ## Architecture
