@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from api.routes import health
 from config import settings
+from db.session import engine
 
 logger = logging.getLogger("echo_server")
 
@@ -32,6 +33,8 @@ def run_migrations() -> None:
 async def lifespan(_: FastAPI):
     run_migrations()
     yield
+    await engine.dispose()
+    logger.info("Database engine disposed, shutdown complete.")
 
 
 app = FastAPI(title="Echo Companion server", version="0.1.0", lifespan=lifespan)
