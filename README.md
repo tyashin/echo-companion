@@ -73,7 +73,7 @@ echo-companion/
 │   ├── architecture.md
 │   ├── implementation_plan.md
 │   └── open_questions.md
-├── docker-compose.yml      # Postgres + pgvector and Neo4j for local development
+├── docker-compose.example.yml # template for the gitignored local docker-compose.yml
 ├── server/                 # Python server and processing workers (FastAPI, uv, Alembic)
 ├── client/                 # Godot 4.7.1 client (Android target, Linux desktop development)
 ├── firmware/               # Optional pan-tilt controller firmware (later phase)

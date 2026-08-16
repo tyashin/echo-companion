@@ -1,3 +1,6 @@
+# Template for docker-compose.yml — copy to docker-compose.yml and fill in
+# real credentials. docker-compose.yml is gitignored and must never be committed.
+#
 # docker-compose for local development only (Phase 0.1).
 # Python apps run locally under uv during development; containers are for production.
 services:
@@ -7,7 +10,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: echo
-      POSTGRES_PASSWORD: echo
+      POSTGRES_PASSWORD: changeme
       POSTGRES_DB: echo
     volumes:
       - echo_postgres_data:/var/lib/postgresql/data
@@ -26,12 +29,12 @@ services:
     container_name: echo_neo4j
     restart: unless-stopped
     environment:
-      NEO4J_AUTH: neo4j/echo-graph-dev
+      NEO4J_AUTH: neo4j/changeme
       NEO4J_server_memory_heap_max__size: 512m
     volumes:
       - echo_neo4j_data:/data
     ports:
-      # Host ports offset by 10000: a non-Docker Neo4j already occupies 7474/7687 on this machine.
+      # Host ports offset by 10000: a non-Docker Neo4j already occupies 7474/7687 on the dev PC.
       - "127.0.0.1:17474:7474"  # browser
       - "127.0.0.1:17687:7687"  # bolt
     networks:
