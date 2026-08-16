@@ -32,6 +32,8 @@ jobs:
           python-version: "3.13"
       - name: Install dependencies
         run: uv sync
+      - name: Create .env from template
+        run: cp .env.example .env
       - name: Lint
         run: uv run ruff check .
       - name: Unit tests

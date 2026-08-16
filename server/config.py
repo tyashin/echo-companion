@@ -10,21 +10,23 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    debug: bool = True
+    # All values come from server/.env (see .env.example) or real env vars;
+    # no defaults are hardcoded here.
+    debug: bool
     # Async driver (asyncpg) for the app, sync driver (psycopg2) for Alembic.
-    database_url: str = "postgresql+asyncpg://echo:echo@localhost:5432/echo"
-    database_sync_url: str = "postgresql+psycopg2://echo:echo@localhost:5432/echo"
+    database_url: str
+    database_sync_url: str
 
     # Neo4j is provisioned by docker-compose; the graph projection arrives in
     # Phase 0.8/1a, so only connection coordinates live here for now.
-    neo4j_uri: str = "bolt://localhost:17687"
-    neo4j_user: str = "neo4j"
-    neo4j_password: str = "echo-graph-dev"
+    neo4j_uri: str
+    neo4j_user: str
+    neo4j_password: str
 
     # Server configuration
-    host: str = "0.0.0.0"
-    port: int = 8000
-    log_level: str = "INFO"
+    host: str
+    port: int
+    log_level: str
 
 
 settings = Settings()

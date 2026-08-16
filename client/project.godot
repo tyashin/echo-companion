@@ -1,5 +1,10 @@
 ; Engine configuration file.
-; It's best edited using the editor UI and not directly.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -12,16 +17,9 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
-; Dev-environment bridge for the Godot MCP server (agent-driven run/debug,
-; scene-tree inspection, screenshots). Listens on 127.0.0.1:9090 while the
-; game runs. Not part of the game logic.
 McpInteractionServer="*res://scripts/mcp_interaction_server.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=800
-
-[rendering]
-
-renderer/rendering_method="forward_plus"
