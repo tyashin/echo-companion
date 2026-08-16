@@ -1,0 +1,4 @@
+# Spike-local artifacts
+build/
+*.apk
+results/

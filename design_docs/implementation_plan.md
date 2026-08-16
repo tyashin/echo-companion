@@ -41,6 +41,8 @@ What can kill the project, in the order it should be retired:
 
 ### 0.2 Godot camera spike (tablet)
 
+**Status: IN PROGRESS (2026-08-16).** Spike project written in `spikes/camera_spike/`: `CameraFeed` → `get_image()` readback → JPEG encode harness logging per-second metrics (feed fps, extracted fps, stage timings, CPU, thermal) to CSV + JSON summary, with an adb-side thermal/CPU collector in `tools/` and a headless `--self-test` validated on desktop. Android export preset prepared; SDK reinstall on the dev PC is pending (user-owned). Remaining: deploy to the tablet, 30-minute run, record numbers and the decision below.
+
 - Minimal Godot project on the target tablet: acquire frames via `CameraServer`/`CameraFeed`, `get_image()` readback, encode; measure sustained achievable frame rate, latency, CPU and thermal behavior over a 30-minute run.
 
 *Done when:* measured numbers are written down and a decision is recorded: GDScript path sufficient / C++ GDExtension required / camera plan revised. This is the commit-or-abandon test for the whole vision path.
